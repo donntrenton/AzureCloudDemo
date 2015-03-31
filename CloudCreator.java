@@ -1,18 +1,25 @@
+// General imports
 import java.io.File;
 import java.io.FileInputStream;
-import java.io.IOException;
 import java.net.URI;
 
-// Imports for exception handling
+// Exception handling imports
 import java.net.URISyntaxException;
+import java.io.IOException;
 import java.security.InvalidKeyException;
+
 import javax.xml.parsers.ParserConfigurationException;
+
 import com.microsoft.windowsazure.exception.ServiceException;
+
 import org.xml.sax.SAXException;
 // import java.util.concurrent.ExecutionException;
 // import javax.xml.transform.TransformerException;
 // import java.util.ArrayList;
 // import java.lang.Object;
+
+
+
 
 // Imports for service management client and configuration
 // import com.microsoft.windowsazure.core.*;
@@ -25,16 +32,11 @@ import com.microsoft.windowsazure.management.ManagementService;
 // Service management imports for storage accounts
 import com.microsoft.windowsazure.management.storage.*;
 import com.microsoft.windowsazure.management.storage.models.*;
-
 // Imports for blob/storage service, including containers
 import com.microsoft.azure.storage.*;
 import com.microsoft.azure.storage.blob.*;
-
 // Service management imports for compute services
 import com.microsoft.windowsazure.management.compute.*;
-// import com.microsoft.windowsazure.management.compute.models.*;
-// import com.microsoft.windowsazure.core.OperationResponse;
-
 // Imports for authentication
 import com.microsoft.windowsazure.core.utils.KeyStoreType;
 
@@ -60,125 +62,146 @@ public class CloudCreator {
 	    Configuration config = ManagementConfiguration.configure(
 		    new URI(uri),
 		    subscriptionId,
-		    keyStoreLocation, // path to the JKS file
-		    keyStorePassword, // password for the JKS file
-		    KeyStoreType.jks  // flag that you are using a JKS keystore
+		    keyStoreLocation,  // Path to the JKS file
+		    keyStorePassword,  // Password for the JKS file
+		    KeyStoreType.jks   // Flag that you are using a JKS keystore
 		);
 
 	    return config;
     }
 
 
-    // Define a method to create the management client
+    // Define a method to create the management client.
     public static void createManagementClient() throws Exception {
     	Configuration config = createConfiguration();
     	managementClient = ManagementService.create(config);
     }
 
 
-    // Define a method to create the storage management client
+    // Define a method to create the storage management client.
     public static void createStorageManagementClient() throws Exception {
         Configuration config = createConfiguration();
         storageManagementClient = StorageManagementService.create(config);
     }
 
 
-    // Define a method to create the compute client (VM)
+    // Define a method to create the compute client (VM).
     public static void createComputeManagementClient() throws Exception {
         Configuration config = createConfiguration();
         computeManagementClient = ComputeManagementService.create(config);
     }
 
 
-    // Define a method to create the storage account for the virtual machine's image (VHD file)
-    public static CloudStorageAccount createStorageAccount(String storageAccountName) throws Exception {
+    // Define a method to create the storage account for the virtual machine's image (VHD file).
+    public static void createStorageAccount(String storageAccountName, String storageContainerName) throws Exception {
 
-        // Define storage management client parameters
-        // String storageAccountName = "storageacct0120d";  // Use only lower case for the storage account name
+        // Define storage management client parameters.
         String storageAccountDescription = "This is a test storage account created by the AzureCloudDemo app.";
         String storageLocation = "West US";
         // Need the account key to construct the connection string; initialize to null then use getPrimaryKey() to retrieve the key
         // String storageAccountType = "Standard_LRS";  // Is this value needed?
-        String storageAccountKey = "";
 
-        // Set parameters for the storage account
+        // Set parameters for the storage account.
         StorageAccountCreateParameters storageAccountParameters = new StorageAccountCreateParameters();
         storageAccountParameters.setName(storageAccountName);
         storageAccountParameters.setLabel(storageAccountDescription);
         storageAccountParameters.setLocation(storageLocation);
-        // storageAccountParameters.setAccountType(storageAccountType);  // Q: The test code calls setAccountType(); do I have the latest SDK?
+        // storageAccountParameters.setAccountType(storageAccountType);  // Q: The test code calls setAccountType(); do I need this?
 
+        // Create the storage account.
         storageManagementClient.getStorageAccountsOperations().create(storageAccountParameters);
-
-        // Get the primary key for the storage account
-        StorageAccountGetKeysResponse storageAccountGetKeysResponse = storageManagementClient.getStorageAccountsOperations().getKeys(storageAccountName);
-        storageAccountKey = storageAccountGetKeysResponse.getPrimaryKey();
-
-        // Define a connection string
-        final String storageConnectionString =
-            "DefaultEndpointsProtocol=http;" +
-            "AccountName=" + storageAccountName +
-            "AccountKey=" + storageAccountKey;
-
-    	// Initialize a new storage account.
-    	CloudStorageAccount storageAccount = null;
-
-        try {
-        	// Retrieve storage account from connection string
-            storageAccount = CloudStorageAccount.parse(storageConnectionString);
-
-            return storageAccount;
-        }
-
-    	catch (Exception e)
-    	{
-    	    // Output the stack trace.
-    	    e.printStackTrace();
-
-            // Return the blob container, or null if an error occurred.
-    	    return null;
-    	}
     }
 
 
-    // Define a method to create a storage container
-    public static CloudBlobContainer createStorageContainer(CloudStorageAccount storageAccount, String storageContainer) throws Exception {
+    // Retrieve the storage account key for the specified storage account.
+    public static String retrieveStorageAccountKey(String storageAccountName) throws Exception {
+        String storageAccountKey = "";
+        StorageAccountGetKeysResponse storageAccountGetKeysResponse = storageManagementClient.getStorageAccountsOperations().getKeys(storageAccountName);
+        storageAccountKey = storageAccountGetKeysResponse.getPrimaryKey();
+        return storageAccountKey;
+    }
 
-		// Initialize a new blob client.
-    	CloudBlobClient blobClient = null;
+
+    // Define a method to create a storage container.
+    public static void createStorageContainer(String storageAccountName, String storageContainerName) throws Exception {
 
     	try {
-            // Create the blob client
-            blobClient = storageAccount.createCloudBlobClient();
+            // Retrieve the storage account key, which is needed for the connection string.
+    		String storageAccountKey = retrieveStorageAccountKey(storageAccountName);
 
-            // Get a reference to a container. The container name must be lower case.
-            CloudBlobContainer blobContainer = blobClient.getContainerReference(storageContainer);
+            // Define a connection string using the account name and account key.
+            String storageConnectionString =
+                "DefaultEndpointsProtocol=http;" +
+                "AccountName=" + storageAccountName + ";" +
+                "AccountKey=" + storageAccountKey;
+
+            // Retrieve the storage account using the connection string.
+            CloudStorageAccount storageAccount = CloudStorageAccount.parse(storageConnectionString);
+
+            // Create the blob client.
+            CloudBlobClient blobClient = storageAccount.createCloudBlobClient();
+
+            // Get a reference to a container.
+            CloudBlobContainer blobContainer = blobClient.getContainerReference(storageContainerName);
 
             // Create the blob container if one does not exist.
             blobContainer.createIfNotExists();
-
-            return blobContainer;
             }
 
     	catch (Exception e)
     	{
     	    // Output the stack trace.
     	    e.printStackTrace();
-
-            // Return the blob container, or null if an error occurred.
-    	    return null;
     	}
     }
 
-    // Define a method to upload the VHD file to the blob container
-    protected static void uploadFileToContainer(CloudBlobContainer blobContainer, String blobName, String vhdFilePath)
+
+    // Define a method to upload the VHD file to the blob container.
+    protected static void uploadFileToContainer(String storageAccountName, String storageContainerName,
+        String blobName, String vhdFilePath)
         throws InvalidKeyException, URISyntaxException, StorageException, InterruptedException, IOException {
 
+        // Retrieve the storage account key, which is needed for the connection string.
+		String storageAccountKey = retrieveStorageAccountKey(storageAccountName);
+
+        // Define a connection string using the account name and account key.
+        String storageConnectionString =
+            "DefaultEndpointsProtocol=http;" +
+            "AccountName=" + storageAccountName + ";" +
+            "AccountKey=" + storageAccountKey;
+
+    	// Define a connection string for the storage account.
+        CloudStorageAccount storageAccount = CloudStorageAccount.parse(storageConnectionString);
+
+        // Create the blob client.
+        CloudBlobClient blobClient = storageAccount.createCloudBlobClient();
+
+        CloudBlobContainer container = blobClient.getContainerReference(storageContainerName);
+
+        // (I think the following code is from Rob's article--review it and make sure it's not redundant.)
         // Create a blob named "myimage.jpg" with contents from the local file.
-        CloudBlockBlob blockBlob = blobContainer.getBlockBlobReference(blobName);
+    	// CloudBlobContainer blobContainer = null;
+        // CloudBlockBlob blockBlob = blobContainer.getBlockBlobReference(blobName);
         File source = new File(vhdFilePath);
         blockBlob.upload(new FileInputStream(source), source.length());
     }
+
+    /* uploadFileToBlob from test code:
+     *
+    protected static void uploadFileToBlob(String storageAccountName, String storageContainer,
+		String fileName, String filePath) throws InvalidKeyException, URISyntaxException,
+		StorageException, InterruptedException, IOException {
+
+			MockCloudBlobClient blobClient = createBlobClient(storageAccountName, storageAccountKey);
+    		MockCloudBlobContainer container = blobClient.getContainerReference(storageContainer);
+    		MockCloudPageBlob pageblob = container.getPageBlobReference(fileName);
+    		File source = new File(filePath + fileName);
+    		pageblob.upload(new FileInputStream(source), source.length());
+	 *
+	 *
+
+     * End uploadFileToBlob	*/
+
 
 
     // ----- Begin VM creation code -----
@@ -364,24 +387,25 @@ public class CloudCreator {
     	createStorageManagementClient();
     	createComputeManagementClient();
 
-    	// Name the storage account that contains the virtual machine's VHD file; use only lower case for the name
-    	String storageAccountName = "storageacct0120d";
-    	// Name the storage container
-    	String storageContainer = "container0120d";
+        // Name the storage account that contains the virtual machine's VHD file; use only lower case for the name.
+        String storageAccountName = "storage0325";
+        // Name the storage container; use only lower case for the name.
+        String storageContainerName = "container0325";
+
         // Specify the path to a local file to be uploaded to the storage container
-        String vhdFilePath = "C:\\Temp\\test-image.jpg";
+        String vhdFilePath = "C:\\Temp\\vm-ubuntu-0325-osdisk.vhd";
         // Specify the name of the blob in which the VHD file will be stored
-        String blobName = "myimage.jpg";
+        String blobName = "vm-ubuntu-0325-osdisk.vhd";
 
         try {
-        	// Create the storage account
-        	CloudStorageAccount storageAccount = createStorageAccount(storageAccountName);
+            // Create the storage account.
+            createStorageAccount(storageAccountName, storageContainerName);
 
-            // Create the storage container
-        	CloudBlobContainer blobContainer = createStorageContainer(storageAccount, storageContainer);
+        	// Create a container in the storage account.
+            createStorageContainer(storageAccountName, storageContainerName);
 
             // Upload the VHD file to the container
-        	uploadFileToContainer(blobContainer, vhdFilePath, blobName);
+        	uploadFileToContainer(storageAccountName, storageContainerName, blobName, vhdFilePath);
 
         	// Create VM
         	// createVMDeployment(hostedServiceName, storageAccountName, storageContainer);
