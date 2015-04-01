@@ -146,62 +146,57 @@ public class CloudCreator {
 
             // Create the blob container if one does not exist.
             blobContainer.createIfNotExists();
+
+            // return blobContainer;
             }
 
     	catch (Exception e)
     	{
     	    // Output the stack trace.
     	    e.printStackTrace();
+
+    	    // return null;
     	}
     }
 
 
     // Define a method to upload the VHD file to the blob container.
     protected static void uploadFileToContainer(String storageAccountName, String storageContainerName,
-        String blobName, String vhdFilePath)
-        throws InvalidKeyException, URISyntaxException, StorageException, InterruptedException, IOException {
+    		String vhdFilePath, String blobFileName)
+        throws Exception, InvalidKeyException, URISyntaxException, StorageException, InterruptedException, IOException {
 
-        // Retrieve the storage account key, which is needed for the connection string.
-		String storageAccountKey = retrieveStorageAccountKey(storageAccountName);
+    	try {
+            // Retrieve the storage account key, which is needed for the connection string.
+    		String storageAccountKey = retrieveStorageAccountKey(storageAccountName);
 
-        // Define a connection string using the account name and account key.
-        String storageConnectionString =
-            "DefaultEndpointsProtocol=http;" +
-            "AccountName=" + storageAccountName + ";" +
-            "AccountKey=" + storageAccountKey;
+            // Define a connection string for the storage account, using the account name and account key.
+            String storageConnectionString =
+                "DefaultEndpointsProtocol=http;" +
+                "AccountName=" + storageAccountName + ";" +
+                "AccountKey=" + storageAccountKey;
 
-    	// Define a connection string for the storage account.
-        CloudStorageAccount storageAccount = CloudStorageAccount.parse(storageConnectionString);
+        	// Retrieve the storage account with the connection string.
+            CloudStorageAccount storageAccount = CloudStorageAccount.parse(storageConnectionString);
 
-        // Create the blob client.
-        CloudBlobClient blobClient = storageAccount.createCloudBlobClient();
+            // Create the blob client.
+            CloudBlobClient blobClient = storageAccount.createCloudBlobClient();
 
-        CloudBlobContainer container = blobClient.getContainerReference(storageContainerName);
+            // Get a reference to the container previously created by createStorageContainer().
+            CloudBlobContainer container = blobClient.getContainerReference(storageContainerName);
 
-        // (I think the following code is from Rob's article--review it and make sure it's not redundant.)
-        // Create a blob named "myimage.jpg" with contents from the local file.
-    	// CloudBlobContainer blobContainer = null;
-        // CloudBlockBlob blockBlob = blobContainer.getBlockBlobReference(blobName);
-        File source = new File(vhdFilePath);
-        blockBlob.upload(new FileInputStream(source), source.length());
+            // Upload a local VHD file to the blob container. (The file must be VHD format.)
+            CloudBlockBlob blockBlob = container.getBlockBlobReference(blobFileName);
+            File fileSource = new File(vhdFilePath + blobFileName);
+            blockBlob.upload(new FileInputStream(fileSource), fileSource.length());
+    	}
+
+    	catch (Exception e) {
+    	    // Output the stack trace.
+    	    e.printStackTrace();
+    	}
+
+
     }
-
-    /* uploadFileToBlob from test code:
-     *
-    protected static void uploadFileToBlob(String storageAccountName, String storageContainer,
-		String fileName, String filePath) throws InvalidKeyException, URISyntaxException,
-		StorageException, InterruptedException, IOException {
-
-			MockCloudBlobClient blobClient = createBlobClient(storageAccountName, storageAccountKey);
-    		MockCloudBlobContainer container = blobClient.getContainerReference(storageContainer);
-    		MockCloudPageBlob pageblob = container.getPageBlobReference(fileName);
-    		File source = new File(filePath + fileName);
-    		pageblob.upload(new FileInputStream(source), source.length());
-	 *
-	 *
-
-     * End uploadFileToBlob	*/
-
 
 
     // ----- Begin VM creation code -----
@@ -395,7 +390,7 @@ public class CloudCreator {
         // Specify the path to a local file to be uploaded to the storage container
         String vhdFilePath = "C:\\Temp\\vm-ubuntu-0325-osdisk.vhd";
         // Specify the name of the blob in which the VHD file will be stored
-        String blobName = "vm-ubuntu-0325-osdisk.vhd";
+        String blobFileName = "vm-ubuntu-0325-osdisk.vhd";
 
         try {
             // Create the storage account.
@@ -405,7 +400,7 @@ public class CloudCreator {
             createStorageContainer(storageAccountName, storageContainerName);
 
             // Upload the VHD file to the container
-        	uploadFileToContainer(storageAccountName, storageContainerName, blobName, vhdFilePath);
+        	uploadFileToContainer(storageAccountName, storageContainerName, vhdFilePath, blobFileName);
 
         	// Create VM
         	// createVMDeployment(hostedServiceName, storageAccountName, storageContainer);
