@@ -2,24 +2,17 @@
 import java.io.File;
 import java.io.FileInputStream;
 import java.net.URI;
+import java.util.ArrayList;
 
 // Exception handling imports
 import java.net.URISyntaxException;
 import java.io.IOException;
 import java.security.InvalidKeyException;
-
 import javax.xml.parsers.ParserConfigurationException;
-
 import com.microsoft.windowsazure.exception.ServiceException;
-
 import org.xml.sax.SAXException;
-// import java.util.concurrent.ExecutionException;
-// import javax.xml.transform.TransformerException;
-// import java.util.ArrayList;
-// import java.lang.Object;
-
-
-
+import java.util.concurrent.ExecutionException;
+import javax.xml.transform.TransformerException;
 
 // Imports for service management client and configuration
 // import com.microsoft.windowsazure.core.*;
@@ -32,15 +25,23 @@ import com.microsoft.windowsazure.management.ManagementService;
 // Service management imports for storage accounts
 import com.microsoft.windowsazure.management.storage.*;
 import com.microsoft.windowsazure.management.storage.models.*;
+
 // Imports for blob/storage service, including containers
 import com.microsoft.azure.storage.*;
 import com.microsoft.azure.storage.blob.*;
+
 // Service management imports for compute services
 import com.microsoft.windowsazure.management.compute.*;
+import com.microsoft.windowsazure.management.compute.models.*;
+import com.microsoft.windowsazure.core.OperationResponse;
+
 // Imports for authentication
 import com.microsoft.windowsazure.core.utils.KeyStoreType;
 
+
 public class CloudCreator {
+
+    // ----- Management client code -----
 
     // Instantiate management client objects
     protected static ManagementClient managementClient;
@@ -91,6 +92,10 @@ public class CloudCreator {
         computeManagementClient = ComputeManagementService.create(config);
     }
 
+    // ----- End management client code -----
+
+
+    // ----- Storage creation code -----
 
     // Define a method to create the storage account for the virtual machine's image (VHD file).
     public static void createStorageAccount(String storageAccountName, String storageContainerName) throws Exception {
@@ -198,9 +203,10 @@ public class CloudCreator {
 
     }
 
+    // ----- End storage creation code -----
 
-    // ----- Begin VM creation code -----
-    /*
+
+    // ----- VM creation code -----
 
     private static ArrayList<Role> createRoleList(String hostedServiceName, String storageAccountName, String storageContainer) throws Exception {
         ArrayList<Role> roleList = new ArrayList<Role>();
@@ -370,7 +376,6 @@ public class CloudCreator {
     }
 
     // End VM creation code
-    */
 
 
     public static void main(String[] args)
@@ -383,9 +388,9 @@ public class CloudCreator {
     	createComputeManagementClient();
 
         // Name the storage account that contains the virtual machine's VHD file; use only lower case for the name.
-        String storageAccountName = "storage0325";
+        String storageAccountName = "storage0407";
         // Name the storage container; use only lower case for the name.
-        String storageContainerName = "container0325";
+        String storageContainerName = "container0407";
 
         // Specify the path to a local file to be uploaded to the storage container
         String vhdFilePath = "C:\\Temp\\vm-ubuntu-0325-osdisk.vhd";
